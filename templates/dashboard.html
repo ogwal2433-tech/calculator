@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculator Dashboard</title>
+
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+      --transition: 0.2s ease;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { min-height: 100%; }
+
+    body {
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      color: var(--text);
+      padding: 24px;
+    }
+
+    button, input { font: inherit; }
+
+    .app { max-width: 1150px; margin: 0 auto; }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding: 18px 22px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      flex-wrap: wrap;
+    }
+
+    .brand h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    .brand p { color: var(--muted); font-size: 0.95rem; }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .user-badge {
+      padding: 10px 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      max-width: 260px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      transition: var(--transition);
+      border-radius: var(--radius-md);
+    }
+    .btn:hover { background: #f8fafc; }
+    .btn-primary { background: var(--primary); border-color: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+    .btn-danger { color: var(--danger); background: #fff; }
+    .btn-success { color: var(--success); background: #fff; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.85fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+    }
+
+    .calculator-panel { padding: 24px; }
+    .sidebar { display: flex; flex-direction: column; gap: 18px; }
+
+    .display-box {
+      padding: 18px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      margin-bottom: 18px;
+    }
+
+    .display-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .memory-tag {
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: white;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .calc-input {
+      width: 100%;
+      padding: 16px 18px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--line);
+      background: white;
+      font-size: 1.1rem;
+      outline: none;
+      margin-bottom: 12px;
+    }
+    .calc-input:focus {
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+    }
+
+    .result-box {
+      min-height: 72px;
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--line);
+      background: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .result {
+      font-size: 1.7rem;
+      font-weight: 700;
+      color: var(--success);
+      word-break: break-word;
+    }
+    .result.error { color: var(--danger); }
+    .result.pending { color: var(--muted); }
+
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .key {
+      min-height: 60px;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .key.operator { color: var(--primary); background: #f8fbff; }
+    .key.function { color: #0f766e; background: #f6fffb; }
+    .key.zero { grid-column: span 2; }
+
+    .utility-row, .action-row { display: grid; gap: 10px; }
+    .utility-row { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 14px; }
+    .action-row { grid-template-columns: 1.3fr 1fr 1fr 1fr; }
+
+    .utility-btn, .action-btn { min-height: 54px; border-radius: var(--radius-md); font-weight: 600; }
+
+    .btn-save {
+      background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+      border: none !important;
+      color: white !important;
+      font-weight: 700 !important;
+      box-shadow: 0 3px 12px rgba(217, 119, 6, 0.45) !important;
+      letter-spacing: 0.01em;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-save:hover {
+      background: linear-gradient(135deg, #fbbf24, #d97706) !important;
+      box-shadow: 0 4px 16px rgba(217, 119, 6, 0.55) !important;
+    }
+    .btn-save::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius-md);
+      animation: savePulse 2.2s ease infinite;
+      pointer-events: none;
+    }
+    @keyframes savePulse {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
+    }
+
+    .sidebar-card { padding: 18px; }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .section-title h2 { font-size: 1rem; margin-bottom: 4px; }
+    .section-title p { color: var(--muted); font-size: 0.9rem; }
+
+    .pill-btn {
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 360px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .empty {
+      padding: 18px;
+      border: 1px dashed var(--line);
+      border-radius: var(--radius-md);
+      color: var(--muted);
+      text-align: center;
+      background: #fcfdff;
+    }
+
+    .history-item, .saved-item {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: #fff;
+    }
+
+    .saved-item {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .history-btn {
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: left;
+      cursor: pointer;
+      color: inherit;
+    }
+
+    .history-expression { font-weight: 600; word-break: break-word; }
+    .history-result { margin-top: 6px; color: var(--success); font-size: 0.92rem; font-weight: 600; }
+
+    .saved-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+      padding: 14px;
+      cursor: pointer;
+    }
+
+    .saved-info { flex: 1; min-width: 0; }
+
+    .saved-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 5px;
+      flex-wrap: wrap;
+    }
+
+    .saved-title {
+      font-weight: 700;
+      word-break: break-word;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .saved-edit-input {
+      flex: 1;
+      min-width: 0;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid #93c5fd;
+      background: white;
+      font-size: 0.95rem;
+      font-weight: 700;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+    }
+
+    .saved-date, .saved-count { color: var(--muted); font-size: 0.88rem; }
+
+    .saved-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .mini-btn {
+      min-height: 34px;
+      min-width: 60px;
+      padding: 0 10px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .saved-chevron {
+      font-size: 11px;
+      color: var(--muted);
+      transition: transform 0.22s ease;
+      display: inline-block;
+      user-select: none;
+      padding: 0 2px;
+    }
+    .saved-chevron.open { transform: rotate(180deg); }
+
+    .saved-calcs {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.2s ease;
+      border-top: 0px solid var(--line);
+      background: var(--surface-2);
+    }
+    .saved-calcs.open {
+      max-height: 320px;
+      overflow-y: auto;
+      border-top: 1px solid var(--line);
+    }
+
+    .calc-entry {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.85rem;
+    }
+    .calc-entry:last-child { border-bottom: none; }
+    .calc-entry-expr {
+      flex: 1;
+      min-width: 0;
+      word-break: break-all;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .calc-entry-result {
+      white-space: nowrap;
+      color: var(--success);
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 1000;
+    }
+    .modal.open { display: flex; }
+
+    .modal-card {
+      width: min(100%, 420px);
+      background: white;
+      border-radius: var(--radius-xl);
+      padding: 22px;
+      border: 1px solid var(--line);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+    }
+    .modal-card h3 { margin-bottom: 8px; }
+    .modal-card p { color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
+
+    .modal-input {
+      width: 100%;
+      min-height: 50px;
+      padding: 0 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--line);
+      outline: none;
+      margin-bottom: 14px;
+    }
+    .modal-input:focus {
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+    }
+
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+    .notif-wrap {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      z-index: 1100;
+      width: max-content;
+      max-width: min(480px, calc(100vw - 32px));
+      pointer-events: none;
+    }
+
+    .notif {
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 14px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: auto;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .notif.hide {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+
+    .notif-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .notif-msg { flex: 1; line-height: 1.4; }
+
+    .notif-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+      padding: 0 0 0 6px;
+      flex-shrink: 0;
+      opacity: 0.65;
+      transition: opacity 0.15s;
+    }
+    .notif-close:hover { opacity: 1; }
+
+    .notif.info {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+    }
+    .notif.info .notif-icon { background: #334155; color: #94a3b8; }
+    .notif.info .notif-close { color: #94a3b8; }
+
+    .notif.success {
+      background: #f0fdf4;
+      color: #14532d;
+      border: 1px solid #bbf7d0;
+    }
+    .notif.success .notif-icon { background: #dcfce7; color: #15803d; }
+    .notif.success .notif-close { color: #15803d; }
+
+    .notif.error {
+      background: #fff1f2;
+      color: #7f1d1d;
+      border: 1px solid #fecdd3;
+    }
+    .notif.error .notif-icon { background: #fee2e2; color: #dc2626; }
+    .notif.error .notif-close { color: #dc2626; }
+
+    @media (max-width: 960px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 12px; }
+
+      .topbar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 14px 16px;
+        gap: 12px;
+      }
+      .topbar-right { flex-direction: column; align-items: stretch; }
+      .user-badge { max-width: 100%; }
+
+      .calculator-panel, .sidebar-card { padding: 14px; }
+
+      .keypad {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .key.function { display: none; }
+      .key.zero { grid-column: span 2; }
+
+      .utility-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .action-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .action-row #calculateBtn { grid-column: span 2; }
+
+      .saved-top { flex-direction: column; }
+      .saved-actions { width: 100%; }
+      .saved-actions .mini-btn { flex: 1; }
+
+      .modal-actions { flex-direction: column-reverse; }
+      .modal-actions .btn { width: 100%; }
+
+      .notif-wrap {
+        top: 12px;
+        max-width: calc(100vw - 24px);
+      }
+
+      .result { font-size: 1.4rem; }
+    }
+
+    @media (max-width: 380px) {
+      .keypad { gap: 6px; }
+      .key { min-height: 52px; font-size: 0.9rem; }
+      .utility-btn, .action-btn { min-height: 46px; font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>Calculator Dashboard</h1>
+        <p>Simple, clean, and responsive</p>
+      </div>
+      <div class="topbar-right">
+        <div class="user-badge" id="userEmailDisplay">{{ email }}</div>
+        <button id="logoutBtn" class="btn pill-btn" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel calculator-panel">
+        <div class="display-box">
+          <div class="display-head">
+            <span class="label">Calculator</span>
+            <div class="memory-tag" id="memoryBadge">Memory: 0</div>
+          </div>
+
+          <input
+            id="calcInput"
+            class="calc-input"
+            type="text"
+            placeholder="Enter expression..."
+            autocomplete="off"
+            autofocus
+          />
+
+          <div class="result-box">
+            <span class="label">Result</span>
+            <div id="result" class="result pending">—</div>
+          </div>
+        </div>
+
+        <div class="keypad" id="keypad">
+          <button class="btn key" data-value="7" type="button">7</button>
+          <button class="btn key" data-value="8" type="button">8</button>
+          <button class="btn key" data-value="9" type="button">9</button>
+          <button class="btn key operator" data-value="/" type="button">÷</button>
+          <button class="btn key function" data-func="sqrt" type="button">√</button>
+
+          <button class="btn key" data-value="4" type="button">4</button>
+          <button class="btn key" data-value="5" type="button">5</button>
+          <button class="btn key" data-value="6" type="button">6</button>
+          <button class="btn key operator" data-value="*" type="button">×</button>
+          <button class="btn key function" data-func="power" type="button">^</button>
+
+          <button class="btn key" data-value="1" type="button">1</button>
+          <button class="btn key" data-value="2" type="button">2</button>
+          <button class="btn key" data-value="3" type="button">3</button>
+          <button class="btn key operator" data-value="-" type="button">−</button>
+          <button class="btn key function" data-value="%" type="button">%</button>
+
+          <button class="btn key zero" data-value="0" type="button">0</button>
+          <button class="btn key" data-value="." type="button">.</button>
+          <button class="btn key" data-value="(" type="button">(</button>
+          <button class="btn key" data-value=")" type="button">)</button>
+          <button class="btn key operator" data-value="+" type="button">+</button>
+        </div>
+
+        <div class="utility-row">
+          <button class="btn utility-btn" data-action="memory-add" type="button">M+</button>
+          <button class="btn utility-btn" data-action="memory-subtract" type="button">M−</button>
+          <button class="btn utility-btn" data-action="memory-recall" type="button">MR</button>
+          <button class="btn utility-btn" data-action="memory-clear" type="button">MC</button>
+          <button class="btn utility-btn" data-action="backspace" type="button">⌫</button>
+        </div>
+
+        <div class="action-row">
+          <button id="calculateBtn" class="btn action-btn btn-primary" type="button">Calculate</button>
+          <button class="btn action-btn" data-action="clear-entry" type="button">C</button>
+          <button class="btn action-btn btn-danger" data-action="all-clear" type="button">AC</button>
+          <button id="openSaveModalBtn" class="btn action-btn btn-save" type="button">⬇ Save</button>
+        </div>
+      </section>
+
+      <aside class="sidebar">
+        <section class="panel sidebar-card">
+          <div class="section-head">
+            <div class="section-title">
+              <h2>Recent calculations</h2>
+              <p>Click any item to reuse it</p>
+            </div>
+          </div>
+          <div id="history" class="list">
+            <div class="empty">No calculations yet.</div>
+          </div>
+        </section>
+
+        <section class="panel sidebar-card">
+          <div class="section-head">
+            <div class="section-title">
+              <h2>Saved histories</h2>
+              <p>Stored in your account</p>
+            </div>
+          </div>
+          <div id="savedList" class="list">
+            <div class="empty">Loading saved histories...</div>
+          </div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <div id="saveModal" class="modal">
+    <div class="modal-card">
+      <h3>Save history</h3>
+      <p>Enter a title for this calculation history.</p>
+      <input
+        id="historyTitle"
+        class="modal-input"
+        type="text"
+        placeholder="e.g. Budget, Homework, Measurements"
+      />
+      <div class="modal-actions">
+        <button id="modalCancelBtn" class="btn" type="button">Cancel</button>
+        <button id="modalConfirmBtn" class="btn btn-primary" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="notifWrap" class="notif-wrap"></div>
+
+  <script>
+    const els = {
+      userEmailDisplay: document.getElementById("userEmailDisplay"),
+      logoutBtn: document.getElementById("logoutBtn"),
+      calcInput: document.getElementById("calcInput"),
+      result: document.getElementById("result"),
+      memoryBadge: document.getElementById("memoryBadge"),
+      calculateBtn: document.getElementById("calculateBtn"),
+      history: document.getElementById("history"),
+      savedList: document.getElementById("savedList"),
+      saveModal: document.getElementById("saveModal"),
+      openSaveModalBtn: document.getElementById("openSaveModalBtn"),
+      historyTitle: document.getElementById("historyTitle"),
+      modalCancelBtn: document.getElementById("modalCancelBtn"),
+      modalConfirmBtn: document.getElementById("modalConfirmBtn"),
+      notifWrap: document.getElementById("notifWrap")
+    };
+
+    let memory = 0;
+    let history = [];
+
+    function escapeHtml(str = "") {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    const ICONS = { info: "i", success: "✓", error: "✕" };
+
+    function showToast(message, type = "info") {
+      const notif = document.createElement("div");
+      notif.className = `notif ${type}`;
+      notif.innerHTML = `
+        <div class="notif-icon">${ICONS[type] || "i"}</div>
+        <div class="notif-msg">${escapeHtml(message)}</div>
+        <button class="notif-close" aria-label="Dismiss">&times;</button>
+      `;
+      els.notifWrap.appendChild(notif);
+
+      notif.querySelector(".notif-close").addEventListener("click", () => dismiss(notif));
+      const timer = setTimeout(() => dismiss(notif), 3200);
+      notif._timer = timer;
+    }
+
+    function dismiss(notif) {
+      clearTimeout(notif._timer);
+      notif.classList.add("hide");
+      setTimeout(() => notif.remove(), 280);
+    }
+
+    async function apiRequest(url, options = {}) {
+      const response = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        },
+        ...options
+      });
+
+      if (response.status === 401) {
+        window.location.href = "/";
+        throw new Error("Session expired.");
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      const data = contentType.includes("application/json") ? await response.json() : null;
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Request failed.");
+      }
+
+      return data;
+    }
+
+    function formatNumber(value) {
+      if (!Number.isFinite(Number(value))) return "0";
+      const n = Number(value);
+      return Number.isInteger(n) ? String(n) : String(Number(n.toPrecision(12)));
+    }
+
+    function setResult(value, isError = false) {
+      els.result.textContent = value;
+      els.result.classList.remove("error", "pending");
+      if (isError) els.result.classList.add("error");
+    }
+
+    function resetResult() {
+      els.result.textContent = "—";
+      els.result.classList.remove("error");
+      els.result.classList.add("pending");
+    }
+
+    function updateMemoryBadge() {
+      els.memoryBadge.textContent = `Memory: ${formatNumber(memory)}`;
+    }
+
+    function appendValue(value) {
+      els.calcInput.value += value;
+      resetResult();
+      els.calcInput.focus();
+    }
+
+    function backspace() {
+      els.calcInput.value = els.calcInput.value.slice(0, -1);
+      resetResult();
+    }
+
+    function clearEntry() {
+      els.calcInput.value = "";
+      resetResult();
+      els.calcInput.focus();
+    }
+
+    function allClear() {
+      els.calcInput.value = "";
+      resetResult();
+      els.calcInput.focus();
+    }
+
+    function insertFunction(type) {
+      if (type === "sqrt") appendValue("√(");
+      if (type === "power") appendValue("^");
+    }
+
+    function normalizeExpression(expr) {
+      const compact = String(expr).replace(/\s+/g, "");
+      if (!compact) return "";
+      if (!/^[0-9+\-*/^%().√]+$/.test(compact)) throw new Error("Invalid characters");
+
+      return compact
+        .replace(/√\(/g, "Math.sqrt(")
+        .replace(/\^/g, "**")
+        .replace(/%/g, "/100");
+    }
+
+    function evaluateExpression(expr) {
+      const processed = normalizeExpression(expr);
+      if (!processed) return "";
+      const value = Function(`"use strict"; return (${processed})`)();
+      if (!Number.isFinite(value)) throw new Error("Invalid result");
+      return Number(value.toPrecision(12));
+    }
+
+    function calculate() {
+      const expr = els.calcInput.value.trim();
+
+      if (!expr) {
+        resetResult();
+        return;
+      }
+
+      try {
+        const value = evaluateExpression(expr);
+        const formatted = formatNumber(value);
+        setResult(formatted);
+
+        history.unshift(`${expr} = ${formatted}`);
+        history = history.slice(0, 50);
+        renderHistory();
+      } catch (err) {
+        console.warn(err);
+        setResult("Error", true);
+        showToast("Invalid expression.", "error");
+      }
+    }
+
+    function parseHistoryItem(item) {
+      const [expression, ...rest] = String(item).split(" = ");
+      return {
+        expression: expression || "",
+        result: rest.join(" = ") || ""
+      };
+    }
+
+    function renderHistory() {
+      if (!history.length) {
+        els.history.innerHTML = `<div class="empty">No calculations yet.</div>`;
+        return;
+      }
+
+      els.history.innerHTML = history.map((item, index) => {
+        const parsed = parseHistoryItem(item);
+        return `
+          <div class="history-item">
+            <button class="history-btn" type="button" data-history-index="${index}">
+              <div class="history-expression">${escapeHtml(parsed.expression)}</div>
+              <div class="history-result">= ${escapeHtml(parsed.result)}</div>
+            </button>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function formatSavedDate(dateString) {
+      if (!dateString) return "Saved just now";
+      const d = new Date(dateString);
+      if (Number.isNaN(d.getTime())) return dateString;
+      return d.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+    }
+
+    function openModal() {
+      if (!history.length) {
+        showToast("Nothing to save yet.", "info");
+        return;
+      }
+
+      els.historyTitle.value = "";
+      els.saveModal.classList.add("open");
+      document.body.style.overflow = "hidden";
+      setTimeout(() => els.historyTitle.focus(), 0);
+    }
+
+    function closeModal() {
+      els.saveModal.classList.remove("open");
+      document.body.style.overflow = "";
+    }
+
+    async function saveCurrentHistory() {
+      const title = els.historyTitle.value.trim();
+
+      if (!title) {
+        showToast("Enter a title first.", "error");
+        els.historyTitle.focus();
+        return;
+      }
+
+      const originalText = els.modalConfirmBtn.textContent;
+      els.modalConfirmBtn.disabled = true;
+      els.modalConfirmBtn.textContent = "Saving...";
+
+      try {
+        await apiRequest("/api/saved_histories", {
+          method: "POST",
+          body: JSON.stringify({
+            title,
+            history
+          })
+        });
+
+        closeModal();
+        await loadSavedHistories();
+        showToast("History saved successfully.", "success");
+      } catch (err) {
+        console.error(err);
+        showToast(err.message || "Failed to save history.", "error");
+      } finally {
+        els.modalConfirmBtn.disabled = false;
+        els.modalConfirmBtn.textContent = originalText;
+      }
+    }
+
+    function buildCalcsHtml(historyArr) {
+      if (!Array.isArray(historyArr) || !historyArr.length) {
+        return `<div class="calc-entry"><span style="color:var(--muted);font-size:0.85rem;">No entries.</span></div>`;
+      }
+
+      return historyArr.map(item => {
+        const parsed = parseHistoryItem(item);
+        return `
+          <div class="calc-entry">
+            <span class="calc-entry-expr">${escapeHtml(parsed.expression)}</span>
+            <span class="calc-entry-result">= ${escapeHtml(parsed.result)}</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function loadSavedHistories() {
+      try {
+        const savedHistories = await apiRequest("/api/saved_histories");
+
+        if (!savedHistories.length) {
+          els.savedList.innerHTML = `<div class="empty">No saved histories yet.</div>`;
+          return;
+        }
+
+        let html = "";
+        let firstItem = true;
+
+        savedHistories.forEach(item => {
+          const count = Array.isArray(item.history) ? item.history.length : 0;
+          const isFirst = firstItem;
+          firstItem = false;
+
+          html += `
+            <div class="saved-item" data-doc-id="${item.id}">
+              <div class="saved-top" data-toggle-id="${item.id}">
+                <div class="saved-info">
+                  <div class="saved-title-row">
+                    <span class="saved-title" id="title-text-${item.id}">${escapeHtml(item.title || "Untitled")}</span>
+                    <input
+                      class="saved-edit-input"
+                      id="title-input-${item.id}"
+                      type="text"
+                      value="${escapeHtml(item.title || "Untitled")}"
+                      style="display:none;"
+                      aria-label="Edit title"
+                    />
+                  </div>
+                  <div class="saved-date">${escapeHtml(formatSavedDate(item.created_at))}</div>
+                  <div class="saved-count">${count} entr${count === 1 ? "y" : "ies"}</div>
+                </div>
+                <div class="saved-actions" data-actions-stop>
+                  <button class="btn mini-btn" type="button" data-action="load" data-id="${item.id}">Load</button>
+                  <button class="btn mini-btn" type="button" data-action="rename-start" data-id="${item.id}" id="rename-btn-${item.id}">Rename</button>
+                  <button class="btn mini-btn btn-success" type="button" data-action="rename-save" data-id="${item.id}" id="rename-save-btn-${item.id}" style="display:none;">OK</button>
+                  <button class="btn mini-btn btn-danger" type="button" data-action="delete" data-id="${item.id}">Delete</button>
+                  <span class="saved-chevron ${isFirst ? "open" : ""}" id="chevron-${item.id}">▼</span>
+                </div>
+              </div>
+              <div class="saved-calcs ${isFirst ? "open" : ""}" id="calcs-${item.id}">
+                ${buildCalcsHtml(item.history)}
+              </div>
+            </div>
+          `;
+        });
+
+        els.savedList.innerHTML = html;
+      } catch (err) {
+        console.error(err);
+        els.savedList.innerHTML = `<div class="empty">Error loading saved histories.</div>`;
+        showToast("Failed to load saved histories.", "error");
+      }
+    }
+
+    function toggleCalcs(docId) {
+      const calcs = document.getElementById(`calcs-${docId}`);
+      const chevron = document.getElementById(`chevron-${docId}`);
+
+      if (!calcs) return;
+
+      const isOpen = calcs.classList.contains("open");
+      calcs.classList.toggle("open", !isOpen);
+      if (chevron) chevron.classList.toggle("open", !isOpen);
+    }
+
+    function startRename(docId) {
+      const titleText = document.getElementById(`title-text-${docId}`);
+      const titleInput = document.getElementById(`title-input-${docId}`);
+      const renameBtn = document.getElementById(`rename-btn-${docId}`);
+      const saveBtn = document.getElementById(`rename-save-btn-${docId}`);
+
+      if (!titleText || !titleInput) return;
+
+      titleText.style.display = "none";
+      titleInput.style.display = "block";
+      titleInput.focus();
+      titleInput.select();
+
+      if (renameBtn) renameBtn.style.display = "none";
+      if (saveBtn) saveBtn.style.display = "";
+    }
+
+    async function saveRename(docId) {
+      const titleText = document.getElementById(`title-text-${docId}`);
+      const titleInput = document.getElementById(`title-input-${docId}`);
+      const renameBtn = document.getElementById(`rename-btn-${docId}`);
+      const saveBtn = document.getElementById(`rename-save-btn-${docId}`);
+
+      const newTitle = titleInput ? titleInput.value.trim() : "";
+
+      if (!newTitle) {
+        showToast("Title cannot be empty.", "error");
+        if (titleInput) titleInput.focus();
+        return;
+      }
+
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = "...";
+      }
+
+      try {
+        await apiRequest(`/api/saved_histories/${docId}`, {
+          method: "PUT",
+          body: JSON.stringify({ title: newTitle })
+        });
+
+        if (titleText) titleText.textContent = newTitle;
+        if (titleInput) titleInput.value = newTitle;
+
+        if (titleText) titleText.style.display = "";
+        if (titleInput) titleInput.style.display = "none";
+        if (renameBtn) renameBtn.style.display = "";
+        if (saveBtn) saveBtn.style.display = "none";
+
+        showToast("Title updated.", "success");
+      } catch (err) {
+        console.error(err);
+        showToast("Failed to rename.", "error");
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "OK";
+        }
+      }
+    }
+
+    async function loadHistoryById(docId) {
+      try {
+        const item = await apiRequest(`/api/saved_histories/${docId}`);
+
+        history = Array.isArray(item.history) ? [...item.history] : [];
+        renderHistory();
+        els.calcInput.value = "";
+        resetResult();
+
+        showToast(`Loaded "${item.title}".`, "success");
+      } catch (err) {
+        console.error(err);
+        showToast("Failed to load history.", "error");
+      }
+    }
+
+    async function deleteSavedHistory(docId) {
+      if (!confirm("Delete this saved history?")) return;
+
+      try {
+        await apiRequest(`/api/saved_histories/${docId}`, {
+          method: "DELETE"
+        });
+
+        await loadSavedHistories();
+        showToast("History deleted.", "success");
+      } catch (err) {
+        console.error(err);
+        showToast("Failed to delete history.", "error");
+      }
+    }
+
+    function memoryAdd() {
+      const raw = els.result.textContent;
+      const value = Number(raw);
+
+      if (!els.result.classList.contains("pending") && !Number.isNaN(value) && Number.isFinite(value)) {
+        memory += value;
+        updateMemoryBadge();
+        showToast("Added to memory.", "success");
+      } else {
+        showToast("Calculate a result first.", "info");
+      }
+    }
+
+    function memorySubtract() {
+      const raw = els.result.textContent;
+      const value = Number(raw);
+
+      if (!els.result.classList.contains("pending") && !Number.isNaN(value) && Number.isFinite(value)) {
+        memory -= value;
+        updateMemoryBadge();
+        showToast("Subtracted from memory.", "success");
+      } else {
+        showToast("Calculate a result first.", "info");
+      }
+    }
+
+    function memoryRecall() {
+      appendValue(String(memory));
+    }
+
+    function memoryClear() {
+      memory = 0;
+      updateMemoryBadge();
+      showToast("Memory cleared.", "info");
+    }
+
+    function handleAction(action, id = null) {
+      switch (action) {
+        case "memory-add": memoryAdd(); break;
+        case "memory-subtract": memorySubtract(); break;
+        case "memory-recall": memoryRecall(); break;
+        case "memory-clear": memoryClear(); break;
+        case "backspace": backspace(); break;
+        case "clear-entry": clearEntry(); break;
+        case "all-clear": allClear(); break;
+        case "load": loadHistoryById(id); break;
+        case "rename-start": startRename(id); break;
+        case "rename-save": saveRename(id); break;
+        case "delete": deleteSavedHistory(id); break;
+      }
+    }
+
+    document.addEventListener("click", event => {
+      const button = event.target.closest("button");
+
+      const toggleHeader = event.target.closest("[data-toggle-id]");
+      if (toggleHeader && !event.target.closest("[data-actions-stop]")) {
+        toggleCalcs(toggleHeader.dataset.toggleId);
+      }
+
+      if (!button) return;
+
+      if (button.dataset.value) {
+        appendValue(button.dataset.value);
+        return;
+      }
+
+      if (button.dataset.func) {
+        insertFunction(button.dataset.func);
+        return;
+      }
+
+      if (button.dataset.action) {
+        handleAction(button.dataset.action, button.dataset.id);
+        return;
+      }
+
+      if (button.id === "calculateBtn") {
+        calculate();
+        return;
+      }
+
+      if (button.id === "openSaveModalBtn") {
+        openModal();
+        return;
+      }
+
+      if (button.id === "modalCancelBtn") {
+        closeModal();
+        return;
+      }
+
+      if (button.id === "modalConfirmBtn") {
+        saveCurrentHistory();
+        return;
+      }
+
+      if (button.id === "logoutBtn") {
+        window.location.href = "/logout";
+        return;
+      }
+
+      const historyBtn = button.closest("[data-history-index]");
+      if (historyBtn) {
+        const index = Number(historyBtn.dataset.historyIndex);
+        const item = history[index];
+
+        if (item) {
+          const parsed = parseHistoryItem(item);
+          els.calcInput.value = parsed.expression;
+          resetResult();
+          els.calcInput.focus();
+        }
+      }
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.target.classList.contains("saved-edit-input")) {
+        const item = event.target.closest(".saved-item");
+        const docId = item ? item.dataset.docId : null;
+
+        if (event.key === "Enter" && docId) {
+          event.preventDefault();
+          saveRename(docId);
+        }
+
+        if (event.key === "Escape" && docId) {
+          const titleText = document.getElementById(`title-text-${docId}`);
+          const renameBtn = document.getElementById(`rename-btn-${docId}`);
+          const saveBtn = document.getElementById(`rename-save-btn-${docId}`);
+
+          event.target.style.display = "none";
+          if (titleText) titleText.style.display = "";
+          if (renameBtn) renameBtn.style.display = "";
+          if (saveBtn) saveBtn.style.display = "none";
+        }
+      }
+    });
+
+    els.calcInput.addEventListener("input", () => resetResult());
+
+    els.calcInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        calculate();
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        allClear();
+      }
+    });
+
+    els.historyTitle.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveCurrentHistory();
+      }
+
+      if (event.key === "Escape") {
+        closeModal();
+      }
+    });
+
+    els.saveModal.addEventListener("click", event => {
+      if (event.target === els.saveModal) {
+        closeModal();
+      }
+    });
+
+    renderHistory();
+    updateMemoryBadge();
+    loadSavedHistories();
+  </script>
+</body>
+</html>
