@@ -11,21 +11,29 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 CORS(app)
 
-# Secret key — set SECRET_KEY in Railway environment variables
 app.secret_key = os.environ.get("SECRET_KEY", "super-secret-key-change-this")
 
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=2)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SESSION_COOKIE_SECURE"] = True  # Railway serves over HTTPS
+app.config["SESSION_COOKIE_SECURE"] = True
 
-# MySQL config — reads Railway's auto-injected vars first, falls back to DB_ vars
+# MySQL config — resolves Railway's auto-injected vars first, falls back to DB_ vars
+MYSQL_HOST     = os.environ.get("MYSQLHOST")     or os.environ.get("DB_HOST",     "localhost")
+MYSQL_PORT     = int(os.environ.get("MYSQLPORT") or os.environ.get("DB_PORT",     3306))
+MYSQL_USER     = os.environ.get("MYSQLUSER")     or os.environ.get("DB_USER",     "root")
+MYSQL_PASSWORD = os.environ.get("MYSQLPASSWORD") or os.environ.get("DB_PASSWORD", "")
+MYSQL_DATABASE = os.environ.get("MYSQLDATABASE") or os.environ.get("DB_NAME",     "calculator_app")
+
+# Print to Railway deploy logs so you can verify vars resolved correctly
+print(f"[DB] host={MYSQL_HOST} port={MYSQL_PORT} user={MYSQL_USER} db={MYSQL_DATABASE}", flush=True)
+
 db_config = {
-    "host":     os.environ.get("MYSQLHOST")     or os.environ.get("DB_HOST",     "localhost"),
-    "port": int(os.environ.get("MYSQLPORT")     or os.environ.get("DB_PORT",     3306)),
-    "user":     os.environ.get("MYSQLUSER")     or os.environ.get("DB_USER",     "root"),
-    "password": os.environ.get("MYSQLPASSWORD") or os.environ.get("DB_PASSWORD", ""),
-    "database": os.environ.get("MYSQLDATABASE") or os.environ.get("DB_NAME",     "calculator_app"),
+    "host":     MYSQL_HOST,
+    "port":     MYSQL_PORT,
+    "user":     MYSQL_USER,
+    "password": MYSQL_PASSWORD,
+    "database": MYSQL_DATABASE,
 }
 
 
@@ -48,9 +56,14 @@ def parse_history_json(value):
     return []
 
 
-# ──────────────────────────────────────────
-# Page routes
-# ──────────────────────────────────────────
+# ── Health check — Railway uses this to confirm the app is alive ──
+
+@app.route("/health")
+def health():
+    return "OK", 200
+
+
+# ── Page routes ──
 
 @app.route("/")
 def index():
@@ -77,9 +90,7 @@ def logout():
     return redirect(url_for("index"))
 
 
-# ──────────────────────────────────────────
-# Auth API
-# ──────────────────────────────────────────
+# ── Auth API ──
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -94,33 +105,23 @@ def login():
     try:
         conn   = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-
-        cursor.execute(
-            "SELECT id, email, password FROM users WHERE email = %s", (email,)
-        )
+        cursor.execute("SELECT id, email, password FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
 
         if not user:
-            # No account — tell frontend to redirect to signup
-            return jsonify({
-                "error":    "No account found with that email.",
-                "redirect": "/signup"
-            }), 404
+            return jsonify({"error": "No account found with that email.", "redirect": "/signup"}), 404
 
         if not check_password_hash(user["password"], password):
             return jsonify({"error": "Incorrect password."}), 401
 
-        session.permanent    = True
-        session["user_id"]   = user["id"]
-        session["email"]     = user["email"]
+        session.permanent  = True
+        session["user_id"] = user["id"]
+        session["email"]   = user["email"]
 
-        return jsonify({
-            "message":  "Login successful!",
-            "user_id":  user["id"],
-            "email":    user["email"]
-        })
+        return jsonify({"message": "Login successful!", "user_id": user["id"], "email": user["email"]})
 
     except Exception as e:
+        print(f"[LOGIN ERROR] {e}", flush=True)
         return jsonify({"error": f"Database error: {str(e)}"}), 500
     finally:
         if cursor: cursor.close()
@@ -135,7 +136,6 @@ def register():
 
     if not email or not password:
         return jsonify({"error": "Email and password are required"}), 400
-
     if len(password) < 6:
         return jsonify({"error": "Password must be at least 6 characters"}), 400
 
@@ -145,31 +145,25 @@ def register():
     try:
         conn   = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-
         cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
         if cursor.fetchone():
             return jsonify({"error": "That email is already registered. Try logging in."}), 409
 
         cursor.close()
         cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO users (email, password) VALUES (%s, %s)",
-            (email, hashed_password)
-        )
+        cursor.execute("INSERT INTO users (email, password) VALUES (%s, %s)", (email, hashed_password))
         conn.commit()
-
         return jsonify({"message": "User registered successfully"}), 201
 
     except Exception as e:
+        print(f"[REGISTER ERROR] {e}", flush=True)
         return jsonify({"error": f"Database error: {str(e)}"}), 500
     finally:
         if cursor: cursor.close()
         if conn:   conn.close()
 
 
-# ──────────────────────────────────────────
-# Saved histories API
-# ──────────────────────────────────────────
+# ── Saved histories API ──
 
 @app.route("/api/saved_histories", methods=["GET"])
 def get_saved_histories():
@@ -180,7 +174,6 @@ def get_saved_histories():
     try:
         conn   = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-
         cursor.execute("""
             SELECT id, title, history_json, created_at, updated_at
             FROM saved_histories
@@ -198,10 +191,10 @@ def get_saved_histories():
                 "created_at": row["created_at"].isoformat() if row["created_at"] else None,
                 "updated_at": row["updated_at"].isoformat() if row["updated_at"] else None,
             })
-
         return jsonify(histories)
 
     except Exception as e:
+        print(f"[GET HISTORIES ERROR] {e}", flush=True)
         return jsonify({"error": str(e)}), 500
     finally:
         if cursor: cursor.close()
@@ -226,16 +219,15 @@ def save_history():
     try:
         conn   = get_db_connection()
         cursor = conn.cursor()
-
         cursor.execute("""
             INSERT INTO saved_histories (user_id, title, history_json)
             VALUES (%s, %s, %s)
         """, (session["user_id"], title, json.dumps(history)))
-
         conn.commit()
         return jsonify({"message": "Saved successfully", "id": cursor.lastrowid}), 201
 
     except Exception as e:
+        print(f"[SAVE HISTORY ERROR] {e}", flush=True)
         return jsonify({"error": str(e)}), 500
     finally:
         if cursor: cursor.close()
@@ -251,7 +243,6 @@ def get_saved_history(history_id):
     try:
         conn   = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-
         cursor.execute("""
             SELECT id, title, history_json, created_at, updated_at
             FROM saved_histories
@@ -271,6 +262,7 @@ def get_saved_history(history_id):
         })
 
     except Exception as e:
+        print(f"[GET HISTORY ERROR] {e}", flush=True)
         return jsonify({"error": str(e)}), 500
     finally:
         if cursor: cursor.close()
@@ -292,21 +284,18 @@ def update_saved_history(history_id):
     try:
         conn   = get_db_connection()
         cursor = conn.cursor()
-
         cursor.execute("""
-            UPDATE saved_histories
-            SET title = %s
+            UPDATE saved_histories SET title = %s
             WHERE id = %s AND user_id = %s
         """, (title, history_id, session["user_id"]))
-
         conn.commit()
 
         if cursor.rowcount == 0:
             return jsonify({"error": "History not found"}), 404
-
         return jsonify({"message": "Updated successfully"})
 
     except Exception as e:
+        print(f"[UPDATE HISTORY ERROR] {e}", flush=True)
         return jsonify({"error": str(e)}), 500
     finally:
         if cursor: cursor.close()
@@ -322,29 +311,25 @@ def delete_saved_history(history_id):
     try:
         conn   = get_db_connection()
         cursor = conn.cursor()
-
         cursor.execute("""
             DELETE FROM saved_histories
             WHERE id = %s AND user_id = %s
         """, (history_id, session["user_id"]))
-
         conn.commit()
 
         if cursor.rowcount == 0:
             return jsonify({"error": "History not found"}), 404
-
         return jsonify({"message": "Deleted successfully"})
 
     except Exception as e:
+        print(f"[DELETE HISTORY ERROR] {e}", flush=True)
         return jsonify({"error": str(e)}), 500
     finally:
         if cursor: cursor.close()
         if conn:   conn.close()
 
 
-# ──────────────────────────────────────────
-# Entry point
-# ──────────────────────────────────────────
+# ── Entry point ──
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
